@@ -7,7 +7,7 @@ not affiliated with Samsung. [Releases](https://github.com/centauri/loxberry-sam
 and [adapter support](https://github.com/centauri/loxberry-samsung-local/issues).
 
 A native LoxBerry plugin with English and Dutch interfaces for Samsung appliances on the local
-network. **Version 0.2.13 is an MVP for hardware evaluation, not a claim of universal
+network. **Version 0.2.14 is an MVP for hardware evaluation, not a claim of universal
 Samsung support or a hardware-certified release.** No Docker, containers,
 Portainer, `.env` file, separate Mosquitto, or manually created certificate is used.
 
@@ -20,7 +20,7 @@ the MQTT instance identity; configure discovery again and check any Loxone topic
 references. Future updates retain the published centauri installer identity.
 
 The 0.2.11 package and 0.2.12 legacy package failed installer metadata validation.
-Use 0.2.13 or later. There is now one installation ZIP, with centauri's GitHub
+Use 0.2.14 or later. There is now one installation ZIP, with centauri's GitHub
 no-reply address. Support is through GitHub Issues, not email.
 
 1. Use **LoxBerry 4 on Debian 12 or newer**, with Python 3.11+ and systemd.
@@ -38,6 +38,22 @@ The installer creates a private virtual environment and a locally generated
 RSA-2048/SHA-256 client certificate, then starts an unprivileged systemd service.
 Broker credentials are read through `LoxBerry::IO::mqtt_connectiondetails`; they
 are neither copied into plugin settings nor displayed in the UI.
+
+## Automatic updates
+
+Install 0.2.14 once manually to register the native LoxBerry update URLs. In
+LoxBerry Plugin Management, enable automatic updates including **prereleases**
+for Samsung Local to receive development releases. Stable-only users will not
+receive these evaluation builds. LoxBerry controls update scheduling and user
+preferences; the plugin does not override them.
+
+After tagged-release tests pass, GitHub publishes the installation ZIP, then
+updates `prerelease.cfg` on the `updates` branch. The stable `release.cfg` has
+version `0.0.0` until a stable release is deliberately promoted. Ordinary commits
+and upstream monitoring do not ship updates. Update installation uses the same
+configuration backup/restore hooks as manual upgrades.
+
+No LoxBerry AppStore listing is required for these update URLs to work.
 
 ## Appearance
 
@@ -63,7 +79,7 @@ poll. Shared field mappings work without an exact consumer-model entry.
   for routed networks. No normal appliance-IP or secure-port setup.
 * Secure ports from OCF advertisements, checked with upstream's stateless DTLS
   probe. If no port is advertised, Samsung candidates receive bounded stateless
-  probes on 5684 and 49152Ã¢â‚¬â€œ49160. Only an unambiguous responding endpoint is used.
+  probes on 5684 and 49152ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ49160. Only an unambiguous responding endpoint is used.
 * Persistent OCF device-ID tracking with a connected-session identity check.
   Address/port changes replace sessions without changing MQTT device topics.
   Conflicting simultaneous identities are quarantined. Missing IDs use a host/port
@@ -311,7 +327,7 @@ have not been established by Windows development tests.
 
 Project layout: `bin/samsung_local/` runtime, `webfrontend/htmlauth/` authenticated
 English UI, `dpkg/apt` Debian dependencies, root lifecycle scripts, `tests/`,
-`tools/build.py`, and `.github/workflows/test.yml` for Linux/Python 3.11Ã¢â‚¬â€œ3.13 checks.
+`tools/build.py`, and `.github/workflows/test.yml` for Linux/Python 3.11ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ3.13 checks.
 
 Protocol code is pinned to [SmartThings-Local 3cc0931](https://github.com/QuiteYellow/SmartThings-Local/tree/3cc0931e4758cb11ba8b23520db9d6185b8f1ea0).
 Mappings reference [LocalThings 5c2e185](https://github.com/mbillow/localthings/tree/5c2e185ec5912b29407934897d8d888aa4cfc374).

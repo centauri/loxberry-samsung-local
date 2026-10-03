@@ -1,18 +1,16 @@
 # Samsung Local for LoxBerry
 
-## 0.2.13 installer correction
+## 0.2.14 native automatic updates
 
-Remove the broken legacy-package variant. Its serialized configuration had
-lowercase keys that LoxBerry's case-sensitive parser could not read. The build
-now checks exact key casing; CI also reads the packaged metadata using Perl
-Config::Simple, the same parser used by LoxBerry.
+Register native LoxBerry stable and prerelease update URLs. Install this ZIP once
+manually, then enable automatic updates including prereleases for Samsung Local
+in LoxBerry Plugin Management. There is no stable release yet; stable-only users
+will not receive development releases.
 
-**For pre-GitHub development installations (0.2.10 or earlier), uninstall the old
-plugin before installing this ZIP.** This is a fresh installation: settings,
-discovery networks, credentials and MQTT instance identity reset. Configure
-networks again and check Loxone topic references. Future updates use the stable
-centauri identity and the existing preservation hooks. No personal email is
-included; the author email is a GitHub no-reply address.
+Future tagged releases update the prerelease feed only after tests pass and the
+installation ZIP is published. Author identity remains unchanged from 0.2.13, so
+normal upgrades run the configuration-preservation hooks. Users still on the
+pre-GitHub builds (0.2.10 or earlier) must uninstall those before a fresh install.
 
 Native local Samsung appliance integration, with English and Dutch UI, existing
 LoxBerry MQTT settings, automatic OCF discovery, compatibility reports and bounded
