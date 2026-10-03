@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">Samsung Local — appliance connected to the local network</title>
+  <rect x="4" y="4" width="120" height="120" rx="8" fill="#243746"/>
+  <g fill="none" stroke="#fff" stroke-width="6" stroke-linejoin="round">
+    <path d="M57 93H27V22h50v71H57v14h44V83"/>
+    <path d="M27 44h50M38 55v14"/>
+  </g>
+  <circle cx="40" cy="33" r="4" fill="#8fca45"/>
+  <g stroke="#fff" stroke-width="4" stroke-linejoin="round">
+    <path d="M90 83V62h5v-7h12v7h5v21z" fill="#243746"/>
+    <path d="M97 68v8m8-8v8" fill="none" stroke-width="3"/>
+  </g>
+</svg>

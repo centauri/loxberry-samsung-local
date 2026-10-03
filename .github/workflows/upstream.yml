@@ -1,0 +1,32 @@
+name: Review upstream changes
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 7 * * 1'
+permissions:
+  contents: read
+concurrency:
+  group: upstream-review
+  cancel-in-progress: false
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compare reviewed upstream commits
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python tools/check_upstream.py --fail-on-change
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: upstream-review
+          path: dist/upstream/
+          if-no-files-found: warn
+          retention-days: 30

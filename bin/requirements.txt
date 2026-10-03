@@ -1,0 +1,6 @@
+# Reviewed 2026-10-03. Do not replace this with a floating branch.
+smartthings-local @ git+https://github.com/QuiteYellow/SmartThings-Local.git@3cc0931e4758cb11ba8b23520db9d6185b8f1ea0
+cbor2==5.9.0
+pyOpenSSL==25.3.0
+cryptography>=45.0.7,<47
+paho-mqtt==2.1.0

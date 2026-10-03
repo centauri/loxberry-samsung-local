@@ -1,0 +1,49 @@
+/* Layout only on themed LoxBerry. Its header loads and selects the design system.
+   Do not set body classes, redefine --lb-* tokens, or bundle a second theme. */
+.sl { max-width: 1200px; color: var(--lb-text, inherit); font-family: inherit; }
+.sl * { box-sizing: border-box; }
+.sl .sl-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem 1.5rem; }
+.sl .sl-version { margin: 0; }
+.sl .sl-status { display: flex; flex-wrap: wrap; gap: .5rem 2rem; margin: .75rem 0; padding: .75rem 0; border-block: 1px solid var(--lb-border-color, #ccc); }
+.sl .sl-status div { display: flex; gap: .6em; }
+.sl dt { font-weight: bold; }
+.sl dd { margin: 0; }
+.sl .sl-help, .sl small { color: var(--lb-text-secondary, inherit); font-size: .9em; }
+.sl small { display: block; overflow-wrap: anywhere; }
+.sl .sl-notice { padding: .7em 1em; border-left: 3px solid var(--lb-warning, #b8860b); color: inherit; background: transparent; }
+.sl section { margin: 1.75rem 0; }
+.sl .sl-appliance { padding: 1rem 0; border-bottom: 1px solid var(--lb-border-color, #ccc); }
+.sl h3 { margin: 0 0 .25em; font-size: 1.05em; }
+.sl .sl-device-status { font-size: .9em; font-weight: bold; }
+.sl label { display: block; margin: .8em 0; }
+.sl input[type="checkbox"] { margin-right: .5em; }
+.sl .lb-input, .sl .lb-select, .sl .lb-textarea { display: block; max-width: 42rem; margin-top: .35em; }
+.sl .lb-btn { white-space: normal; }
+.sl textarea { min-height: 7em; }
+.sl .sl-intervals { display: flex; flex-wrap: wrap; gap: 0 2rem; }
+.sl .sl-intervals label { flex: 0 1 19rem; max-width: 100%; }
+.sl details { margin: 1rem 0; }
+.sl summary { cursor: pointer; font-weight: bold; padding: .3em 0; }
+.sl code, .sl pre { font-family: var(--lb-font-mono, monospace); overflow-wrap: anywhere; }
+.sl pre { padding: .8em; border: 1px solid var(--lb-border-color, #ccc); background: var(--lb-input-bg, transparent); color: var(--lb-input-text, inherit); max-height: 24rem; overflow: auto; white-space: pre-wrap; font-size: .85em; }
+.sl table { width: 100%; table-layout: fixed; }
+.sl th, .sl td { overflow-wrap: anywhere; vertical-align: top; }
+.sl th:first-child { width: 60%; }
+.sl .sl-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.sl :focus-visible { outline: 2px solid var(--lb-primary, #6dac20); outline-offset: 3px; }
+/* Earlier builds have jQuery Mobile but no lb-* components. Controls opt out
+   of enhancement, so keep a small, scoped classic fallback. */
+.sl-legacy { margin: 1rem auto; padding: 0 1rem; }
+.sl-legacy .lb-section-title { border-bottom: 2px solid #6dac20; padding-bottom: .5em; font-size: 1.15em; }
+.sl-legacy .lb-btn { display: inline-block; padding: .55em .9em; margin: .4em 0; border: 1px solid #888; border-radius: 3px; background: #eee; color: #222; font: inherit; text-decoration: none; cursor: pointer; }
+.sl-legacy .lb-btn-primary { background: #6dac20; color: #fff; border-color: #5a9418; text-shadow: none; }
+.sl-legacy .lb-input, .sl-legacy .lb-select, .sl-legacy .lb-textarea { width: 100%; padding: .5em; border: 1px solid #aaa; border-radius: 3px; background: #fff; color: #222; font: inherit; }
+.sl-legacy .lb-table { border-collapse: collapse; }
+.sl-legacy .lb-table th, .sl-legacy .lb-table td { text-align: left; padding: .5em; border-bottom: 1px solid #ccc; }
+@media (max-width: 600px) {
+  .sl .sl-status { gap: .4em 1.2em; }
+  .sl .sl-toolbar { align-items: flex-start; }
+  .sl th:first-child { width: 52%; }
+}
+
+.sl .sl-log { height: 22rem; max-height: 55vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }

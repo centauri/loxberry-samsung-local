@@ -1,0 +1,12 @@
+[
+  {
+    "repository": "QuiteYellow/SmartThings-Local",
+    "reviewed_commit": "3cc0931e4758cb11ba8b23520db9d6185b8f1ea0",
+    "paths": ["smartthings_local/", "docs/", "tests/", "setup_cert.py", "pyproject.toml", "LICENSE", "NOTICE"]
+  },
+  {
+    "repository": "mbillow/localthings",
+    "reviewed_commit": "5c2e185ec5912b29407934897d8d888aa4cfc374",
+    "paths": ["custom_components/localthings/", "tests/fixtures/", "docs/", "CONTRIBUTING.md", "LICENSE"]
+  }
+]
