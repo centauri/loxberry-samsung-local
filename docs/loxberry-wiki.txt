@@ -1,0 +1,32 @@
+====== Samsung Local ======
+
+Native local Samsung appliance integration for LoxBerry, maintained by [[https://github.com/centauri|centauri]]. English and Dutch interface. No Docker, separate MQTT broker or Home Assistant installation is required.
+
+**BETA / hardware evaluation:** support depends on appliance protocol and firmware. This plugin does not support every Samsung product. Dryer DV9BN8288AW/EN readings have been confirmed on hardware. TV/audio discovery currently provides public inventory only; TV pairing and remote controls are not implemented.
+
+===== Installation =====
+
+  - Use LoxBerry 4 on Debian 12 or newer with Python 3.11+ and systemd.
+  - Configure the existing LoxBerry MQTT broker/settings.
+  - Install [[https://github.com/centauri/loxberry-samsung-local/releases/download/v0.2.14/loxberry-samsung-local-0.2.14.zip|Samsung Local 0.2.14 installation ZIP]] through Plugin Management. Do not use GitHub's source-code ZIP.
+  - Open Samsung Local and run discovery. If needed, enter your private IPv4 discovery networks in the advanced settings.
+  - Supported appliances expose readings and MQTT topic names on the dashboard. Check both bridge and appliance availability before using retained readings.
+
+Installation needs Internet access for Debian packages and pinned Python dependencies. Appliance communication is local. Devices requiring unsupported authentication are diagnosed; the plugin does not automatically change OCF ownership or security resources.
+
+===== Automatic updates =====
+
+From 0.2.14, native LoxBerry update URLs are included. Enable automatic updates including prereleases in Plugin Management to receive development releases. Stable-only updates do not install evaluation builds. Updates preserve configuration through backup/restore hooks.
+
+Pre-GitHub test builds (0.2.10 or earlier) use a different installer identity: uninstall those before installing the public package. That transition resets configuration, credentials and MQTT instance identity. Normal upgrades from 0.2.13 onward keep the published centauri identity.
+
+===== Support and compatibility =====
+
+  * [[https://github.com/centauri/loxberry-samsung-local|Source code and documentation]]
+  * [[https://github.com/centauri/loxberry-samsung-local/issues|Adapter installation, UI, MQTT and update issues]]
+  * [[https://github.com/centauri/loxberry-samsung-local/blob/main/docs/SUPPORT.md|Community support routing and compatibility reports]]
+  * [[https://github.com/centauri/loxberry-samsung-local/releases|Release notes and downloads]]
+
+The protocol layer uses QuiteYellow/SmartThings-Local. Appliance mappings and compatibility-report conventions follow mbillow/LocalThings where applicable. Review exported JSON before posting it publicly and follow the linked support guide to choose the appropriate upstream project.
+
+Independent community integration; not affiliated with Samsung. MIT license; upstream license notices are preserved.
