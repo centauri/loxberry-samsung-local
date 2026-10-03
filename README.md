@@ -7,21 +7,21 @@ not affiliated with Samsung. [Releases](https://github.com/centauri/loxberry-sam
 and [adapter support](https://github.com/centauri/loxberry-samsung-local/issues).
 
 A native LoxBerry plugin with English and Dutch interfaces for Samsung appliances on the local
-network. **Version 0.2.12 is an MVP for hardware evaluation, not a claim of universal
+network. **Version 0.2.13 is an MVP for hardware evaluation, not a claim of universal
 Samsung support or a hardware-certified release.** No Docker, containers,
 Portainer, `.env` file, separate Mosquitto, or manually created certificate is used.
 
 ## Install
 
-**Updating a pre-GitHub test installation (0.2.10 or earlier):** select the
-`-legacy-upgrade.zip` release asset, and continue using that variant for future
-updates. It retains the original installer identity so LoxBerry runs an upgrade
-with configuration preservation. New installations use the regular ZIP. Both
-contain the same code and UI; only the internal author metadata differs.
+**Moving from pre-GitHub test builds (0.2.10 or earlier):** uninstall the old
+Samsung Local plugin first, then install the regular release ZIP as a fresh
+installation. This resets local settings, discovery networks, credentials and
+the MQTT instance identity; configure discovery again and check any Loxone topic
+references. Future updates retain the published centauri installer identity.
 
-Version 0.2.11 had an empty mandatory author email and was rejected by LoxBerry.
-Use 0.2.12 or later. The regular package uses the maintainer's GitHub no-reply
-address; support is through GitHub Issues, not email.
+The 0.2.11 package and 0.2.12 legacy package failed installer metadata validation.
+Use 0.2.13 or later. There is now one installation ZIP, with centauri's GitHub
+no-reply address. Support is through GitHub Issues, not email.
 
 1. Use **LoxBerry 4 on Debian 12 or newer**, with Python 3.11+ and systemd.
    A 64-bit ARM or x86 system is recommended. Dependency installation on other
@@ -63,7 +63,7 @@ poll. Shared field mappings work without an exact consumer-model entry.
   for routed networks. No normal appliance-IP or secure-port setup.
 * Secure ports from OCF advertisements, checked with upstream's stateless DTLS
   probe. If no port is advertised, Samsung candidates receive bounded stateless
-  probes on 5684 and 49152–49160. Only an unambiguous responding endpoint is used.
+  probes on 5684 and 49152Ã¢â‚¬â€œ49160. Only an unambiguous responding endpoint is used.
 * Persistent OCF device-ID tracking with a connected-session identity check.
   Address/port changes replace sessions without changing MQTT device topics.
   Conflicting simultaneous identities are quarantined. Missing IDs use a host/port
@@ -311,7 +311,7 @@ have not been established by Windows development tests.
 
 Project layout: `bin/samsung_local/` runtime, `webfrontend/htmlauth/` authenticated
 English UI, `dpkg/apt` Debian dependencies, root lifecycle scripts, `tests/`,
-`tools/build.py`, and `.github/workflows/test.yml` for Linux/Python 3.11–3.13 checks.
+`tools/build.py`, and `.github/workflows/test.yml` for Linux/Python 3.11Ã¢â‚¬â€œ3.13 checks.
 
 Protocol code is pinned to [SmartThings-Local 3cc0931](https://github.com/QuiteYellow/SmartThings-Local/tree/3cc0931e4758cb11ba8b23520db9d6185b8f1ea0).
 Mappings reference [LocalThings 5c2e185](https://github.com/mbillow/localthings/tree/5c2e185ec5912b29407934897d8d888aa4cfc374).

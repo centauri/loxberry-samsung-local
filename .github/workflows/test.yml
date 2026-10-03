@@ -14,11 +14,11 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: pip install -r bin/requirements.txt 'pytest>=8,<9' 'ruff==0.15.0'
+      - run: sudo apt-get update && sudo apt-get install -y libconfig-simple-perl
       - run: pip check && ruff check . && pytest -q
       - run: php -l webfrontend/htmlauth/index.php
       - run: for script in preroot.sh preupgrade.sh postinstall.sh postupgrade.sh postroot.sh uninstall/uninstall.sh; do bash -n "$script" || exit; done
       - run: python tools/build.py
-      - run: python tools/build.py --legacy-identity
       - uses: actions/upload-artifact@v4
         with:
           name: samsung-local-${{ matrix.python }}
@@ -47,7 +47,6 @@ jobs:
           assert os.environ['RELEASE_TAG'] == 'v' + cfg['PLUGIN']['VERSION']
           PY
       - run: python tools/build.py
-      - run: python tools/build.py --legacy-identity
       - name: Publish tested evaluation release
         env:
           GH_TOKEN: ${{ github.token }}

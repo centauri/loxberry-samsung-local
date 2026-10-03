@@ -23,14 +23,14 @@ def validate_metadata(cfg):
         raise ValueError("Unsupported LoxBerry plugin interface")
 
 
-def build(output, legacy_identity=False):
+def build(output):
     cfg = configparser.ConfigParser()
+    cfg.optionxform = str  # LoxBerry Config::Simple lookups are case-sensitive.
     cfg.read(ROOT / "plugin.cfg")
     validate_metadata(cfg)
     version = cfg["PLUGIN"]["VERSION"]
     output.mkdir(parents=True, exist_ok=True)
-    suffix = "-legacy-upgrade" if legacy_identity else ""
-    target = output / f"loxberry-samsung-local-{version}{suffix}.zip"
+    target = output / f"loxberry-samsung-local-{version}.zip"
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
         for file in sorted(ROOT.rglob("*")):
             relative = file.relative_to(ROOT)
@@ -44,15 +44,6 @@ def build(output, legacy_identity=False):
             info.external_attr = (0o100755 if executable else 0o100644) << 16
             info.compress_type = zipfile.ZIP_DEFLATED
             payload = file.read_bytes()
-            if relative.as_posix() == "plugin.cfg" and legacy_identity:
-                # Pre-GitHub builds used this identity. LoxBerry hashes author
-                # name/email + plugin name/folder to select the upgrade path.
-                import io
-                cfg["AUTHOR"]["NAME"] = "Samsung Local Contributors"
-                cfg["AUTHOR"]["EMAIL"] = "samsung-local@localhost.invalid"
-                stream = io.StringIO()
-                cfg.write(stream)
-                payload = stream.getvalue().encode("utf-8")
             if file.suffix != ".png":
                 payload = payload.replace(b"\r\n", b"\n")
             archive.writestr(info, payload)
@@ -65,7 +56,5 @@ def build(output, legacy_identity=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=ROOT / "dist")
-    parser.add_argument("--legacy-identity", action="store_true",
-                        help="Preserve the identity of pre-GitHub test installations")
     args = parser.parse_args()
-    build(args.output, args.legacy_identity)
+    build(args.output)

@@ -1,20 +1,18 @@
 # Samsung Local for LoxBerry
 
-## 0.2.12 installer correction
+## 0.2.13 installer correction
 
-Fix the missing mandatory author email that caused 0.2.11 to be rejected before
-installation. The public package uses centauri's GitHub no-reply address, not a
-personal email. Builds now reject missing mandatory installer metadata.
+Remove the broken legacy-package variant. Its serialized configuration had
+lowercase keys that LoxBerry's case-sensitive parser could not read. The build
+now checks exact key casing; CI also reads the packaged metadata using Perl
+Config::Simple, the same parser used by LoxBerry.
 
-**Already running a pre-GitHub test build (0.2.10 or earlier)? Install the
-`-legacy-upgrade.zip` asset.** It preserves the original internal author identity
-so LoxBerry recognizes an update and runs the existing configuration backup and
-restore hooks. Keep using legacy-upgrade assets for that installation. The
-placeholder address in that package is not a support mailbox; use GitHub Issues.
-
-**New installation? Use the ZIP without `-legacy-upgrade`.** Do not install the
-standard package alongside a legacy installation: LoxBerry treats it as a
-different plugin. The failed 0.2.11 attempt did not migrate an existing identity.
+**For pre-GitHub development installations (0.2.10 or earlier), uninstall the old
+plugin before installing this ZIP.** This is a fresh installation: settings,
+discovery networks, credentials and MQTT instance identity reset. Configure
+networks again and check Loxone topic references. Future updates use the stable
+centauri identity and the existing preservation hooks. No personal email is
+included; the author email is a GitHub no-reply address.
 
 Native local Samsung appliance integration, with English and Dutch UI, existing
 LoxBerry MQTT settings, automatic OCF discovery, compatibility reports and bounded
