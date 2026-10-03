@@ -7,11 +7,21 @@ not affiliated with Samsung. [Releases](https://github.com/centauri/loxberry-sam
 and [adapter support](https://github.com/centauri/loxberry-samsung-local/issues).
 
 A native LoxBerry plugin with English and Dutch interfaces for Samsung appliances on the local
-network. **Version 0.2.11 is an MVP for hardware evaluation, not a claim of universal
+network. **Version 0.2.12 is an MVP for hardware evaluation, not a claim of universal
 Samsung support or a hardware-certified release.** No Docker, containers,
 Portainer, `.env` file, separate Mosquitto, or manually created certificate is used.
 
 ## Install
+
+**Updating a pre-GitHub test installation (0.2.10 or earlier):** select the
+`-legacy-upgrade.zip` release asset, and continue using that variant for future
+updates. It retains the original installer identity so LoxBerry runs an upgrade
+with configuration preservation. New installations use the regular ZIP. Both
+contain the same code and UI; only the internal author metadata differs.
+
+Version 0.2.11 had an empty mandatory author email and was rejected by LoxBerry.
+Use 0.2.12 or later. The regular package uses the maintainer's GitHub no-reply
+address; support is through GitHub Issues, not email.
 
 1. Use **LoxBerry 4 on Debian 12 or newer**, with Python 3.11+ and systemd.
    A 64-bit ARM or x86 system is recommended. Dependency installation on other
