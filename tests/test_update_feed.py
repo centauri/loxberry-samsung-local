@@ -49,3 +49,17 @@ def test_plugin_has_native_update_endpoints():
     base = "https://raw.githubusercontent.com/centauri/loxberry-samsung-local/updates/"
     assert cfg["RELEASECFG"] == base + "release.cfg"
     assert cfg["PRERELEASECFG"] == base + "prerelease.cfg"
+
+
+def test_edge_uses_immutable_release_and_does_not_change_stable(tmp_path):
+    feed.publish('0.2.19', tmp_path, stable_release=True)
+    stable = (tmp_path / 'release.cfg').read_bytes()
+    feed.publish('0.2.20', tmp_path, tag='v0.2.20-edge')
+    assert (tmp_path / 'release.cfg').read_bytes() == stable
+    edge = read(tmp_path / 'prerelease.cfg')
+    assert edge['VERSION'] == '0.2.20'
+    assert '/v0.2.20-edge/loxberry-samsung-local-0.2.20.zip' in edge['ARCHIVEURL']
+    with pytest.raises(ValueError, match='channel'):
+        feed.publish('0.2.20', tmp_path, stable_release=True, tag='v0.2.20-edge')
+    with pytest.raises(ValueError, match='channel'):
+        feed.publish('0.2.20', tmp_path, tag='edge')
