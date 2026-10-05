@@ -41,15 +41,12 @@ are neither copied into plugin settings nor displayed in the UI.
 
 ## Automatic updates
 
-Install 0.2.15 once manually to register the native LoxBerry update URLs. In
-LoxBerry Plugin Management, enable automatic updates including **prereleases**
-for Samsung Local to receive development releases. Stable-only users will not
-receive these evaluation builds. LoxBerry controls update scheduling and user
-preferences; the plugin does not override them.
+Version 0.2.18 is published as a normal release. Enable automatic updates for
+Samsung Local in LoxBerry Plugin Management; prerelease opt-in is not required.
+LoxBerry controls update scheduling and preferences; the plugin does not override them.
 
-After tagged-release tests pass, GitHub publishes the installation ZIP, then
-updates `prerelease.cfg` on the `updates` branch. The stable `release.cfg` has
-version `0.0.0` until a stable release is deliberately promoted. Ordinary commits
+After version-tag tests pass, GitHub publishes the installation ZIP, then updates
+both `release.cfg` and `prerelease.cfg` on the `updates` branch. Ordinary commits
 and upstream monitoring do not ship updates. Update installation uses the same
 configuration backup/restore hooks as manual upgrades.
 
