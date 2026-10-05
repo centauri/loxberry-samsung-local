@@ -1,3 +1,10 @@
+## 0.2.19 permanent stable and edge downloads
+
+Adds permanent stable and edge installation ZIP links. Stable releases update
+both native LoxBerry feeds; prereleases update only the edge feed. Automatic
+updates still download immutable versioned assets. No appliance behavior changes.
+The initial stable and edge packages use the same tested code.
+
 # Samsung Local for LoxBerry
 
 ## 0.2.18 — normal release

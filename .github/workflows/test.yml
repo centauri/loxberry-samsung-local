@@ -41,7 +41,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify tag matches plugin version
+      - name: Verify tag and select channel
+        id: channel
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
@@ -49,17 +50,50 @@ jobs:
           import configparser, os
           cfg = configparser.ConfigParser()
           cfg.read('plugin.cfg')
-          assert os.environ['RELEASE_TAG'] == 'v' + cfg['PLUGIN']['VERSION']
+          version = cfg['PLUGIN']['VERSION']
+          tag = os.environ['RELEASE_TAG']
+          assert tag in ('v' + version, 'v' + version + '-edge')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'version={version}\nedge={str(tag.endswith("-edge")).lower()}\n')
           PY
       - run: python tools/build.py
+      - name: Create permanent download asset
+        env:
+          VERSION: ${{ steps.channel.outputs.version }}
+          EDGE: ${{ steps.channel.outputs.edge }}
+        run: |
+          alias=loxberry-samsung-local.zip
+          if [ "$EDGE" = true ]; then alias=loxberry-samsung-local-edge.zip; fi
+          cp "dist/loxberry-samsung-local-$VERSION.zip" "dist/$alias"
+          (cd dist && sha256sum "$alias" > "$alias.sha256")
       - name: Publish tested release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release create "$RELEASE_TAG" dist/*.zip dist/*.sha256 --latest --title "Samsung Local $RELEASE_TAG" --notes-file docs/RELEASE-NOTES.md
-      - name: Publish LoxBerry stable and prerelease feeds after release assets exist
+          EDGE: ${{ steps.channel.outputs.edge }}
+        run: |
+          flags=(--latest)
+          if [ "$EDGE" = true ]; then flags=(--prerelease --latest=false); fi
+          gh release create "$RELEASE_TAG" dist/*.zip dist/*.sha256 "${flags[@]}" --title "Samsung Local $RELEASE_TAG" --notes-file docs/RELEASE-NOTES.md
+      - name: Refresh permanent edge download
+        if: steps.channel.outputs.edge == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          printf 'Development channel. Current build: %s.\n\nSee the versioned release for release notes. This download changes with each tested prerelease.\n' "$RELEASE_TAG" > "$RUNNER_TEMP/edge-notes.txt"
+          if gh release view edge >/dev/null 2>&1; then
+            gh release upload edge dist/loxberry-samsung-local-edge.zip dist/loxberry-samsung-local-edge.zip.sha256 --clobber
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/edge" -f sha="$GITHUB_SHA" -F force=true
+            gh release edit edge --prerelease --latest=false --title "Samsung Local edge (development)" --notes-file "$RUNNER_TEMP/edge-notes.txt"
+          else
+            gh release create edge dist/loxberry-samsung-local-edge.zip dist/loxberry-samsung-local-edge.zip.sha256 --target "$GITHUB_SHA" --prerelease --latest=false --title "Samsung Local edge (development)" --notes-file "$RUNNER_TEMP/edge-notes.txt"
+          fi
+      - name: Publish native update feeds after release assets exist
         env:
           RELEASE_TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.channel.outputs.version }}
+          EDGE: ${{ steps.channel.outputs.edge }}
         run: |
           cp tools/update_feed.py "$RUNNER_TEMP/update_feed.py"
           if git ls-remote --exit-code --heads origin updates; then
@@ -68,7 +102,9 @@ jobs:
           else
             git switch --orphan updates
           fi
-          python "$RUNNER_TEMP/update_feed.py" "${RELEASE_TAG#v}" . --stable
+          flags=()
+          if [ "$EDGE" != true ]; then flags=(--stable); fi
+          python "$RUNNER_TEMP/update_feed.py" "$VERSION" . --tag "$RELEASE_TAG" "${flags[@]}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add release.cfg prerelease.cfg

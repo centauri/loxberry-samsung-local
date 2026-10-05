@@ -7,7 +7,7 @@ not affiliated with Samsung. [Releases](https://github.com/centauri/loxberry-sam
 and [adapter support](https://github.com/centauri/loxberry-samsung-local/issues).
 
 A native LoxBerry plugin with English and Dutch interfaces for Samsung appliances on the local
-network. **Version 0.2.18 is an MVP for hardware evaluation, not a claim of universal
+network. **Version 0.2.19 is an MVP for hardware evaluation, not a claim of universal
 Samsung support or a hardware-certified release.** No Docker, containers,
 Portainer, `.env` file, separate Mosquitto, or manually created certificate is used.
 
@@ -41,16 +41,34 @@ are neither copied into plugin settings nor displayed in the UI.
 
 ## Automatic updates
 
-Version 0.2.18 is published as a normal release. Enable automatic updates for
-Samsung Local in LoxBerry Plugin Management; prerelease opt-in is not required.
-LoxBerry controls update scheduling and preferences; the plugin does not override them.
+Enable automatic updates for Samsung Local in LoxBerry Plugin Management.
+Stable updates do not require prerelease opt-in. Enable prereleases only to test
+edge builds. LoxBerry controls scheduling and preferences.
 
-After version-tag tests pass, GitHub publishes the installation ZIP, then updates
-both `release.cfg` and `prerelease.cfg` on the `updates` branch. Ordinary commits
-and upstream monitoring do not ship updates. Update installation uses the same
-configuration backup/restore hooks as manual upgrades.
+Permanent installation downloads:
 
-No LoxBerry AppStore listing is required for these update URLs to work.
+* [Stable ZIP](https://github.com/centauri/loxberry-samsung-local/releases/latest/download/loxberry-samsung-local.zip)
+* [Edge ZIP (development)](https://github.com/centauri/loxberry-samsung-local/releases/download/edge/loxberry-samsung-local-edge.zip)
+
+After tests pass, tags `vX.Y.Z` publish stable releases; tags `vX.Y.Z-edge`
+publish prereleases and refresh the moving `edge` download. Each tag must match
+the numeric version in `plugin.cfg`. Increment that numeric version for every
+new build, including edge builds: LoxBerry cannot distinguish two builds with
+the same installed version. Promoting identical edge code to stable may reuse
+the version; users already on that edge build need no reinstall.
+
+The initial 0.2.19 stable and edge downloads contain the same code. Subsequent
+edge releases can contain changes that have not yet reached stable.
+
+Native update manifests on the `updates` branch always point to immutable,
+versioned release ZIPs. Edge publication changes only `prerelease.cfg`;
+stable publication promotes both feeds. Assets are uploaded before feeds change.
+Ordinary commits and upstream monitoring do not ship updates. Upgrades retain
+configuration through backup/restore hooks.
+
+The wiki download links stay the same. Its displayed version/status are separate
+catalogue metadata and still need maintaining; installed-plugin updates do not
+consult the wiki.
 
 ## Appearance
 
