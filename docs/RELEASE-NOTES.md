@@ -1,6 +1,10 @@
 # Samsung Local for LoxBerry
 
-## 0.2.18 dryer HTTP control example
+## 0.2.18 — normal release
+
+Published on the stable LoxBerry update channel. Earlier 0.2.14 builds remain
+prereleases. This release includes the HTTP input/export work developed in
+0.2.15–0.2.17 and opt-in dryer outputs.
 
 Add opt-in dryer Start/Resume, Pause, Stop and wrinkle-prevention commands through
 POST-only virtual HTTP outputs. Use a separate control token. Check live appliance
@@ -39,8 +43,7 @@ and English/Dutch instructions. Keep existing MQTT behavior and add a CSV invent
 The XML includes a private read-only token; import it as a Virtual HTTP Input Template.
 The abandoned .Loxone transfer-project experiment is not included.
 
-Local release candidate: automated tests pass; real Config import and live polling
-must still be validated before publishing to the automatic update feed.
+Input XML import and changing readings were subsequently verified by the user.
 
 ## 0.2.14 native automatic updates
 

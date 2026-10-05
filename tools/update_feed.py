@@ -15,21 +15,25 @@ def manifest(version, archive_version=None):
             f"INFOURL={REPO}/releases/tag/v{archive_version}\n")
 
 
-def publish(version, directory):
+def publish(version, directory, stable_release=False):
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise ValueError("Expected a numeric three-part plugin version")
     directory.mkdir(parents=True, exist_ok=True)
     prerelease = directory / "prerelease.cfg"
-    if prerelease.exists():
+    stable = directory / "release.cfg"
+    for channel in ([prerelease, stable] if stable_release else [prerelease]):
+        if not channel.exists():
+            continue
         cfg = configparser.ConfigParser()
         cfg.optionxform = str
-        cfg.read(prerelease)
+        cfg.read(channel)
         previous = cfg["AUTOUPDATE"]["VERSION"]
         if tuple(map(int, previous.split('.'))) > tuple(map(int, version.split('.'))):
             raise ValueError("Refusing to move the update feed backwards")
     prerelease.write_text(manifest(version), encoding="utf-8", newline="\n")
-    stable = directory / "release.cfg"
-    if not stable.exists():
+    if stable_release:
+        stable.write_text(manifest(version), encoding="utf-8", newline="\n")
+    elif not stable.exists():
         # No stable release yet: 0.0.0 cannot update an installed plugin.
         # Keep URLs valid, but do not advertise evaluation builds as stable.
         stable.write_text(manifest("0.0.0", version), encoding="utf-8", newline="\n")
@@ -39,5 +43,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("version")
     parser.add_argument("directory", type=Path)
+    parser.add_argument("--stable", action="store_true")
     args = parser.parse_args()
-    publish(args.version, args.directory)
+    publish(args.version, args.directory, stable_release=args.stable)

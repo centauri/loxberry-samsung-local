@@ -32,6 +32,17 @@ def test_feed_channels_and_published_zip_urls(tmp_path):
     assert read(tmp_path / "prerelease.cfg")["VERSION"] == "0.2.15"
 
 
+def test_stable_promotion_updates_both_channels(tmp_path):
+    feed.publish('0.2.14', tmp_path)
+    feed.publish('0.2.18', tmp_path, stable_release=True)
+    assert read(tmp_path / 'release.cfg')['VERSION'] == '0.2.18'
+    assert read(tmp_path / 'prerelease.cfg')['VERSION'] == '0.2.18'
+    with pytest.raises(ValueError, match='backwards'):
+        feed.publish('0.2.17', tmp_path, stable_release=True)
+    feed.publish('0.2.19', tmp_path)
+    assert read(tmp_path / 'release.cfg')['VERSION'] == '0.2.18'
+
+
 def test_plugin_has_native_update_endpoints():
     cfg = read(ROOT / "plugin.cfg")
     assert cfg["AUTOMATIC_UPDATES"] == "true"
