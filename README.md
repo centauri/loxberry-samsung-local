@@ -7,7 +7,7 @@ not affiliated with Samsung. [Releases](https://github.com/centauri/loxberry-sam
 and [adapter support](https://github.com/centauri/loxberry-samsung-local/issues).
 
 A native LoxBerry plugin with English and Dutch interfaces for Samsung appliances on the local
-network. **Version 0.2.14 is an MVP for hardware evaluation, not a claim of universal
+network. **Version 0.2.18 is an MVP for hardware evaluation, not a claim of universal
 Samsung support or a hardware-certified release.** No Docker, containers,
 Portainer, `.env` file, separate Mosquitto, or manually created certificate is used.
 
@@ -20,7 +20,7 @@ the MQTT instance identity; configure discovery again and check any Loxone topic
 references. Future updates retain the published centauri installer identity.
 
 The 0.2.11 package and 0.2.12 legacy package failed installer metadata validation.
-Use 0.2.14 or later. There is now one installation ZIP, with centauri's GitHub
+Use 0.2.15 or later. There is now one installation ZIP, with centauri's GitHub
 no-reply address. Support is through GitHub Issues, not email.
 
 1. Use **LoxBerry 4 on Debian 12 or newer**, with Python 3.11+ and systemd.
@@ -41,7 +41,7 @@ are neither copied into plugin settings nor displayed in the UI.
 
 ## Automatic updates
 
-Install 0.2.14 once manually to register the native LoxBerry update URLs. In
+Install 0.2.15 once manually to register the native LoxBerry update URLs. In
 LoxBerry Plugin Management, enable automatic updates including **prereleases**
 for Samsung Local to receive development releases. Stable-only users will not
 receive these evaluation builds. LoxBerry controls update scheduling and user
@@ -169,6 +169,57 @@ uses LoxBerry's configured CA and certificate-validation preference, including
 an explicitly disabled validation setting. It never silently switches TLS off.
 
 ## MQTT and Loxone
+
+For a complete dryer wiring example with status readouts, command gates and
+confirmation logic, see [Loxone dryer example](docs/LOXONE-DRYER-EXAMPLE.md).
+Version 0.2.18 adds opt-in HTTP Start/Resume, Pause, Stop and wrinkle-prevention
+outputs, following upstream protocol mappings. Writes on the user's dryer are
+not yet hardware-verified. Download the output XML separately from the input XML.
+Its control token is separate from the read-only token. Every write checks fresh
+Smart Control, child lock, power and operational state; no automatic write retries
+are used. Commands queued before a service restart are discarded.
+
+To revoke HTTP control, disable the appliance control option immediately. To
+replace a leaked control token, remove `config/plugins/samsunglocal/http-control.json`,
+reinstall, and export new output XML. Keep both XML files private. Start/Resume
+is a user pulse in the example, never an automatic consequence of enabling
+Smart Control. Drying phase is exported as 1 (other phases -1), and dry time as seconds.
+
+Open **Loxone input export**, enter the LoxBerry base URL reachable from your
+Miniserver (including its port if needed), and download **HTTP inputs (XML)**.
+In Config, select Virtual Inputs, use **Virtual HTTP Input Templates → Import
+Template**, then add the imported Samsung Local HTTP template to your project.
+This is a real `VirtualInHttp` template; it polls the adapter every 30 seconds.
+It does not require copying virtual inputs between projects. MQTT remains
+available independently; HTTP polling does not depend on MQTT Gateway forwarding.
+
+The XML contains a persistent 256-bit read-only token generated during installation
+and preserved with configuration during upgrades. Treat the XML/URL as private:
+the token grants access to numeric appliance readings, not controls, credentials
+or diagnostics. Use a trusted LAN or HTTPS. No LoxBerry administrator password
+is included. To revoke a leaked token, remove `config/plugins/samsunglocal/http-poll.json`,
+reinstall the plugin, and export a new XML. Previously imported URLs then stop working.
+
+Availability is 0/1; check both the service and appliance availability and Config's
+HTTP input error output. Stale/disabled service status makes availability zero;
+offline readings are omitted. Config may retain or reset missing readings, so
+never use a reading without availability. Remaining `HH:MM:SS` time becomes seconds.
+For string fields ending in `_state` (or named `state`), fixed codes are:
+-1 unknown, 0 ready, 1 running, 2 paused, 3 finished, 4 off, 5 idle, 6 error, 7 stopped.
+Aliases run/running, pause/paused, finished/completed/complete/end and stopped/stop share codes.
+Wrinkle-prevention fields (`wrinklePrevent`) map Off to 0, On to 1 and unknown
+text to -1. A fresh XML export is needed to add this input to older imports.
+Other strings, including numeric-looking identifiers, are not exported as numbers;
+they remain available through MQTT. The XML command comments document mappings
+and units. Export again after discovering new readable capabilities. Repeated
+imports may create duplicates. A CSV topic/name reference is also available for
+users who prefer to create ordinary MQTT Gateway HTTP inputs manually.
+
+This version's XML schema, endpoint authorization and mappings have automated tests;
+XML import and changing readings have been observed in Loxone Config with one dryer.
+The Run-state correction is regression-tested against its reported values.
+
+
 
 Each installation has a persistent random instance ID, avoiding client-ID clashes
 between LoxBerrys. The UI shows the actual prefix:

@@ -3,6 +3,7 @@ import json
 import logging
 import logging.handlers
 import os
+import secrets
 import sys
 
 from .storage import Paths, atomic_json
@@ -45,6 +46,10 @@ def main():
         config = paths.load_config()
         if not paths.settings.exists():
             atomic_json(paths.settings, config)
+        if not (paths.config / 'http-poll.json').exists():
+            atomic_json(paths.config / 'http-poll.json', {'token': secrets.token_hex(32)})
+        if not (paths.config / 'http-control.json').exists():
+            atomic_json(paths.config / 'http-control.json', {'token': secrets.token_hex(32)})
         ensure_certificate(paths.config / "credentials")
         print("Configuration and certificate ready.")
         return 0

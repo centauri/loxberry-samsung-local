@@ -12,6 +12,31 @@ def act(paths, request):
         raise ValueError("Expected a request object")
     action = request.get("action")
     config = paths.load_config()
+    if action == 'dryer_command':
+        from .dryer_control import ACTIONS
+        key = valid_key(request.get('device'))
+        operation = request.get('operation')
+        status = read_json(paths.status, {})
+        device = status.get('devices', {}).get(key, {})
+        options = config['devices'].get(key, {})
+        now = time.time()
+        if (operation not in ACTIONS or not config['enabled'] or not options.get('enabled', True)
+                or not options.get('control') or device.get('kind') != 'dryer'
+                or not device.get('identity_verified') or device.get('status') != 'online'
+                or not 0 <= now - status.get('heartbeat', 0) < 30):
+            raise ValueError('Dryer control is disabled or unavailable')
+        last = read_json(paths.data / 'http-command-rate.json', {})
+        if now - last.get(key, 0) < 3:
+            raise ValueError('Wait before sending another command')
+        if len(list(paths.requests.glob('*.json'))) >= 32:
+            raise ValueError('Request queue full')
+        last[key] = now
+        atomic_json(paths.data / 'http-command-rate.json', last)
+        identifier = str(uuid.uuid4())
+        atomic_json(paths.requests / f'{identifier}.json', {
+            'action': 'dryer_command', 'device': key, 'created_at': now,
+            'command': {'id': identifier, 'timestamp': now, 'operation': operation}})
+        return 'Command queued; verify the appliance state. Not confirmation of execution.'
     if action == "language":
         config['language'] = request.get('language')
         atomic_json(paths.settings, validate_config(config))
@@ -31,7 +56,7 @@ def act(paths, request):
         if action == "device":
             control = request.get("control", False)
             if control and not device.get("control_available"):
-                raise ValueError("This device has no supported power control")
+                raise ValueError("This device has no supported control")
             config["devices"][key] = {"enabled": request["enabled"], "control": control}
             atomic_json(paths.settings, validate_config(config))
             return "Device settings saved."
