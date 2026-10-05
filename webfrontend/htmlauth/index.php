@@ -73,6 +73,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $status = readObject("$lbpdatadir/status.json");
+require_once __DIR__ . '/loxone_export.php';
+$topicRows = samsungTopicRows($status);
+require_once "$lbpbindir/loxone_http.php";
+if (in_array($_GET['download'] ?? '', ['http-xml', 'outputs-xml'], true)) {
+    $outputs = $_GET['download'] === 'outputs-xml';
+    $auth = readObject($lbpconfigdir . ($outputs ? '/http-control.json' : '/http-poll.json'));
+    $base = rtrim((string)($_GET['base_url'] ?? ''), '/');
+    $url = parse_url($base);
+    if (!$url || !in_array($url['scheme'] ?? '', ['http', 'https'], true) || empty($url['host']) || isset($url['user']) || isset($url['pass']) || isset($url['query']) || isset($url['fragment']) || !empty($url['path']) || preg_match('/[\x00-\x20<>"\\\\]/', $base)) {
+        http_response_code(400); exit(h(t('Enter the LoxBerry base URL, for example http://loxberry.')));
+    }
+    if (!preg_match('/^[a-f0-9]{64}$/D', (string)($auth['token'] ?? ''))) {
+        http_response_code(503); exit(h(t('Reinstall the updated plugin to initialize HTTP polling.')));
+    }
+    $folder = basename($lbpconfigdir);
+    if ($outputs) {
+        require_once "$lbpbindir/loxone_outputs.php";
+        try {
+            $xml = samsungOutputXml($status['devices'] ?? [], readObject("$lbpconfigdir/settings.json")['devices'] ?? [], $base, $folder, $auth['token']);
+        } catch (InvalidArgumentException $ex) {
+            http_response_code(409); exit(h(t($ex->getMessage())));
+        }
+        header('Content-Type: application/xml; charset=utf-8');
+        header('Content-Disposition: attachment; filename="samsung-local-outputs.xml"');
+        echo $xml;
+        exit;
+    }
+    $address = $base . '/plugins/' . rawurlencode($folder) . '/poll.php?token=' . $auth['token'];
+    header('Content-Type: application/xml; charset=utf-8');
+    header('Content-Disposition: attachment; filename="samsung-local-http-inputs.xml"');
+    echo samsungHttpXml(samsungHttpRows($status, time()), $address);
+    exit;
+}
+if (($_GET['download'] ?? '') === 'topics-csv') {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="samsung-local-mqtt-topics.csv"');
+    echo samsungTopicsCsv($topicRows);
+    exit;
+}
+
 if (($_GET['download'] ?? '') === 'diagnostics') {
     if (!isset($status['support_report'])) { http_response_code(503); exit(h(t('Start the updated service before exporting diagnostics.'))); }
     header('Content-Type: application/json');
@@ -98,6 +138,18 @@ LBWeb::lbheader('Samsung Local', '', '', $hasDesignSystem);
 <div><dt><?=h(t('Appliances'))?></dt><dd><?=$fresh ? $online : 0?> <?=h(t('online /'))?> <?=count($devices)?></dd></div>
 </dl>
 <p class="sl-help"><?=h(!empty($status['scanning']) && $fresh ? t('Discovery in progress.') : sprintf(t('Automatic discovery every %s seconds.'), $settings['scan_seconds'] ?? 600))?> <?=h(t('MQTT settings come from LoxBerry. Status updates on page refresh.'))?></p>
+<details id="loxone-export"><summary><?=h(t('Loxone input export'))?></summary>
+<p><?=h(t('Import this XML using Virtual HTTP Input Templates in Loxone Config, then add the imported template to your project. The Miniserver polls this adapter every 30 seconds. MQTT remains available separately.'))?></p>
+<form method="get"><input type="hidden" name="download" value="http-xml"><label><?=h(t('LoxBerry base URL reachable from the Miniserver'))?> <input data-role="none" type="url" name="base_url" required value="<?=h((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'loxberry'))?>"></label><button data-role="none" class="lb-btn" type="submit"><?=h(t('Download HTTP inputs (XML)'))?></button></form>
+<p class="sl-help"><?=h(t('The XML contains a private read-only access token. Keep it private. It imports numeric readings, availability (0=no, 1=yes), remaining time in seconds and supported state codes. Other text readings remain available through MQTT. Repeated imports may create duplicates.'))?></p>
+<p class="sl-help"><?=h(t('State codes: -1=unknown, 0=ready, 1=running, 2=paused, 3=finished, 4=off, 5=idle, 6=error, 7=stopped. Check service and device availability and the HTTP input error output before using readings.'))?></p>
+<p class="sl-help"><?=h(t('Wrinkle prevention: 0=off, 1=on, -1=unknown. Export a new XML to include newly supported inputs; existing imports do not gain inputs automatically.'))?></p>
+<form method="get"><input type="hidden" name="download" value="outputs-xml"><label><?=h(t('LoxBerry base URL reachable from the Miniserver'))?> <input data-role="none" type="url" name="base_url" required value="<?=h((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'loxberry'))?>"></label><button data-role="none" class="lb-btn" type="submit"><?=h(t('Download dryer outputs (XML)'))?></button></form>
+<p><?=h(t('Enable controls on the dryer below before exporting outputs. Import under Virtual Output Templates. Use short pulses, with repeat disabled. The output XML contains a separate control token: keep it private. Start/Pause/Stop and wrinkle prevention require Smart Control on, child lock off and a powered, online dryer. Confirm execution from the readings.'))?></p>
+<p><?=h(t('Keep MQTT Gateway HTTP forwarding enabled for your Miniserver and subscribe to samsunglocal/#. Use the exact HTTP virtual input names in the CSV: numeric values use ordinary virtual inputs with Digital input disabled; text values use virtual text inputs. These are not HTTP polling inputs.'))?></p>
+<p><a data-role="none" class="lb-btn" href="?download=topics-csv"><?=h(t('Download all MQTT topics (CSV)'))?></a></p>
+<p class="sl-help"><?=h(t('The CSV is a naming reference, not a Loxone import template. It includes known scalar readings and bridge/device availability. Check availability before using retained readings. Gateway custom value conversions may change the received type.'))?></p>
+</details>
 <details id="help"><summary><?=h(t('Help and support'))?></summary>
 <h3><?=h(t('Getting started'))?></h3>
 <p><?=h(t('Keep the appliance powered and connected to your LAN, then select Discover now. Supported appliances are checked automatically. On a routed VLAN, add the subnet under Advanced discovery networks and allow discovery and the advertised UDP secure port between LoxBerry and that network. MQTT uses your existing LoxBerry settings.'))?></p>
@@ -129,12 +181,13 @@ LBWeb::lbheader('Samsung Local', '', '', $hasDesignSystem);
 <?php foreach ($devices as $key => $device): $options = $settings['devices'][$key] ?? []; $isMedia = in_array($device['kind'] ?? '', ['television', 'network_audio'], true); ?>
 <article class="sl-appliance"><div class="sl-toolbar"><div><h3><?=h($device['name'] ?? 'Samsung appliance')?></h3><small><?=h(t((string)($device['kind'] ?? 'Type not yet identified')))?> · <?=h($device['model'] ?? '')?></small></div><span class="sl-device-status"><?=h(t('Status:'))?> <?=h(t($fresh ? str_replace('_', ' ', $device['status'] ?? 'discovered') : 'stale'))?></span></div>
 <p><?=h(t((string)($device['diagnostic'] ?? '')))?></p>
+<?php if (!empty($device['last_command'])): ?><p><?=h(t('Last command result:'))?> <?=h($device['last_command']['result'] ?? '')?> · <?=h(gmdate('Y-m-d H:i:s', (int)($device['last_command']['at'] ?? 0)))?> UTC</p><?php endif; ?>
 <?php if ($isMedia && !empty($device['media_inventory'])): ?><details><summary><?=h(t('TV/audio public inventory'))?></summary><p><?=h(t('Public identity and advertised paths only. This does not prove authentication, readable TV state or remote-control support.'))?></p><pre><?=h(json_encode($device['media_inventory'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES))?></pre><p><a data-role="none" href="https://github.com/QuiteYellow/SmartThings-Local/blob/main/docs/ocf-vd-devices.md"><?=h(t('Upstream TV/audio findings'))?></a></p></details><?php endif; ?>
 <?php if (empty($device['samsung'])): ?><p class="sl-notice"><?=h(t('OCF candidate found, but Samsung manufacturer information is unavailable. No authentication attempted.'))?></p><?php endif; ?>
 <p class="sl-help"><?=h(t('Address'))?> <?=h($device['host'] ?? '')?> <?=h(t('· secure port'))?> <?=h(t((string)($device['secure_port'] ?? 'not advertised or ambiguous')))?> <?=h(t('· last successful read'))?> <?=isset($device['last_success']) ? h(gmdate('Y-m-d H:i:s', (int)$device['last_success'])) . ' UTC' : h(t('not yet'))?></p>
 <form method="post"><?php csrf(); ?><input data-role="none" type="hidden" name="action" value="device"><input data-role="none" type="hidden" name="device" value="<?=h($key)?>">
 <label><input data-role="none" type="checkbox" name="enabled" <?=($options['enabled'] ?? true) ? 'checked' : ''?>><?=h(t('Read this appliance automatically'))?></label>
-<?php if (!empty($device['control_available'])): ?><label><input data-role="none" type="checkbox" name="control" <?=!empty($options['control']) ? 'checked' : ''?>><?=h(t('Allow MQTT power commands for this appliance'))?></label><small><?=h(t('Only mapped air conditioner / air purifier power commands. Commands need a unique ID and a recent timestamp.'))?></small><?php endif; ?>
+<?php if (!empty($device['control_available'])): ?><label><input data-role="none" type="checkbox" name="control" <?=!empty($options['control']) ? 'checked' : ''?>><?=h(t('Allow supported controls for this appliance'))?></label><small><?=h(t('Dryer HTTP controls require Smart Control on and child lock off. MQTT power control is limited to air conditioners and air purifiers.'))?></small><?php endif; ?>
 <button data-role="none" type="submit" class="lb-btn lb-btn-primary"><?=h(t('Save appliance'))?></button></form>
 <details><summary><?=h(t('Readings and MQTT topics'))?></summary><p><?=h(t('Base topic:'))?> <code><?=h(($status['topic_prefix'] ?? '') . '/' . $key)?></code></p>
 <p class="sl-help"><?=h(t('Check both bridge and appliance availability before using retained readings.'))?></p>

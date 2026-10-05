@@ -14,6 +14,7 @@ from .capabilities import PREFIX, batch_resources, device_type, directory_links,
 from .compatibility_report import evidence
 from .credentials import load_auth
 from .discovery import identity
+from .dryer_control import available as dryer_available, command as dryer_command
 
 LOG = logging.getLogger(__name__)
 
@@ -179,7 +180,7 @@ class DeviceWorker(threading.Thread):
                 except ValueError:
                     pass
                 self.emit(connection_report={"stage": "readings", "error": None}, status="online", diagnostic="", state=state, sensors=sensors,
-                          control_available=can_power, last_success=time.time(),
+                          control_available=can_power or (stable_identity and dryer_available(kind, resources)), last_success=time.time(),
                           **({"legacy_verified": True} if self.compatibility_probe and stable_identity else {}))
                 if self.compatibility_probe:
                     return  # The explicit diagnostic sends reads only, even if commands were queued.
@@ -192,10 +193,32 @@ class DeviceWorker(threading.Thread):
             if command:
                 outcome = "rejected"
                 if stable_identity and self.options.get("control") and time.time() - command["timestamp"] <= 30:
+                    attempted = False
                     try:
-                        href, body = power_command(kind, resources, command["value"])
-                        code, _ = session.post(href.strip("/").split("/"), cbor2.dumps(body), timeout=5)
+                        if 'operation' in command:
+                            # Read interlocks again in the same authenticated session;
+                            # never authorize a dryer write from a cached dashboard value.
+                            latest = batch_resources(get_resource(session, '/device/0'))
+                            for path in ['/power/vs/0', '/kidslock/vs/0', '/remotectrl/vs/0',
+                                         '/operational/state/vs/0', '/washer/vs/0']:
+                                if path not in latest:
+                                    rep = get_resource(session, path)
+                                    if isinstance(rep, dict):
+                                        latest[path] = rep
+                            live_config = self.paths.load_config()
+                            if (not live_config['enabled'] or not live_config['devices'].get(self.device['key'], {}).get('control')
+                                    or not live_config['devices'].get(self.device['key'], {}).get('enabled', True)
+                                    or self.stop_event.is_set() or time.time() - command['timestamp'] > 30):
+                                raise ValueError('Control disabled or command expired')
+                            href, body = dryer_command(kind, latest, command['operation'])
+                        else:
+                            href, body = power_command(kind, resources, command["value"])
+                        payload = cbor2.dumps(body)
+                        attempted = True
+                        code, _ = session.post(href.strip("/").split("/"), payload, timeout=5)
                         outcome = "accepted" if 64 <= code < 96 else "device_rejected"
+                    except ValueError:
+                        outcome = 'uncertain' if attempted else 'rejected'
                     except Exception:
                         outcome = "uncertain"  # Never retry a potentially completed write.
                     next_poll = 0

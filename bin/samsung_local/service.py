@@ -60,6 +60,7 @@ def merge_discovery(registry, discovered):
 class Service:
     def __init__(self, paths):
         self.paths = paths
+        self.started_at = time.time()
         self.stop_event = threading.Event()
         self.events = queue.Queue(maxsize=512)
         self.workers = {}
@@ -96,7 +97,12 @@ class Service:
 
     def request(self, value):
         action = value.get("action")
-        if action == "scan":
+        if action == 'dryer_command':
+            stamp = value.get('created_at', 0)
+            if not max(self.started_at, time.time() - 30) <= stamp <= time.time() + 5:
+                raise ValueError('Expired command or queued before service restart')
+            self.handle_event(('command', value.get('device'), value['command']))
+        elif action == "scan":
             LOG.info('Discovery requested from the UI')
             self.next_scan = 0
         elif action in {"retry", "compatibility"} and value.get("device") in self.registry:
@@ -221,14 +227,15 @@ class Service:
                 self.save_registry()
             self.publish_device(key)
         elif kind == "result":
-            LOG.info('Device %s: power command completed (see MQTT command_result for outcome)', reference(key))
+            LOG.info('Device %s: command result=%s', reference(key), value.get('result'))
+            self.registry[key]['last_command'] = dict(value, at=time.time())
             self.broker.publish(f"{key}/command_result", value, retain=False)
         elif kind == "command":
             worker = self.workers.get(key)
             options = self.config["devices"].get(key, {})
             if (not self.config["enabled"] or not options.get("enabled", True) or not options.get("control")
                     or self.registry[key].get("status") != "online" or not worker or not worker.is_alive()):
-                self.broker.publish(f"{key}/command_result", {"id": value["id"], "result": "disabled_or_offline"}, False)
+                self.handle_event(('result', key, {"id": value["id"], "result": "disabled_or_offline"}))
                 return
             try:
                 self.db.execute("DELETE FROM commands WHERE stamp < ?", (time.time() - 120,))
@@ -240,7 +247,7 @@ class Service:
             try:
                 worker.commands.put_nowait(value)
             except queue.Full:
-                self.broker.publish(f"{key}/command_result", {"id": value["id"], "result": "busy"}, False)
+                self.handle_event(('result', key, {"id": value["id"], "result": "busy"}))
 
     def save_status(self):
         atomic_json(self.paths.status, {"version": __version__, "heartbeat": time.time(),
