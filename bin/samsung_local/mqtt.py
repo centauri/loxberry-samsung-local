@@ -26,7 +26,7 @@ def connection_settings():
     return settings
 
 
-def validate_command(payload, retained, now):
+def validate_command(payload, retained, now, remote=False):
     if retained or len(payload) > 1024:
         raise ValueError("Retained or oversized command rejected")
     data = json.loads(payload)
@@ -38,6 +38,13 @@ def validate_command(payload, retained, now):
     stamp = data["timestamp"]
     if type(stamp) not in {int, float} or not now - 30 <= stamp <= now + 5:
         raise ValueError("Command expired or clock is incorrect")
+    if remote:
+        from .television import KEYS
+        if data['value'] not in KEYS:
+            raise ValueError('Unsupported TV key')
+        data['operation'] = data.pop('value')
+        data['tv_remote'] = True
+        return data
     if data["value"] not in ("on", "off"):
         raise ValueError("Only on/off power commands are supported")
     return data
@@ -101,6 +108,7 @@ class Broker:
         self.reconnected.set()
         self.error = ""
         client.subscribe(self.base + "/+/set/power", qos=1)
+        client.subscribe(self.base + "/+/set/remote", qos=1)
         self.publish("bridge/availability", "online")
 
     def on_disconnect(self, client, userdata, flags, reason_code, properties):
@@ -109,10 +117,10 @@ class Broker:
 
     def on_message(self, client, userdata, message):
         parts = message.topic.split("/")
-        if len(parts) != 5 or parts[-2:] != ["set", "power"]:
+        if len(parts) != 5 or (parts[-2] != "set" or parts[-1] not in {"power", "remote"}):
             return
         try:
-            command = validate_command(message.payload, message.retain, time.time())
+            command = validate_command(message.payload, message.retain, time.time(), remote=parts[-1] == "remote")
             self.inbound.put_nowait(("command", parts[2], command))
         except (ValueError, TypeError, KeyError, queue.Full):
             LOG.warning("MQTT command rejected (invalid, retained, expired or queue full)")

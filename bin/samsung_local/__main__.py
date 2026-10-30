@@ -26,7 +26,7 @@ def main():
     os.umask(0o077)
     paths = Paths(args.config, args.data, args.log)
     if args.command == "admin":
-        from .admin import act
+        from .admin import act, UserRequestError
         try:
             # Serialize read/modify/write configuration changes across PHP requests.
             import fcntl
@@ -37,6 +37,9 @@ def main():
                     raise ValueError("Request is too large")
                 message = act(paths, json.loads(payload))
             print(json.dumps({"ok": True, "message": message}))
+        except UserRequestError as error:
+            print(json.dumps({"ok": False, "message": str(error)}))
+            return 1
         except (ValueError, KeyError, TypeError, OSError):
             print(json.dumps({"ok": False, "message": "Invalid request or unavailable storage. Check the field limits and device status."}))
             return 1

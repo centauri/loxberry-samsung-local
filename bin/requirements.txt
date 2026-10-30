@@ -4,3 +4,6 @@ cbor2==5.9.0
 pyOpenSSL==25.3.0
 cryptography>=45.0.7,<47
 paho-mqtt==2.1.0
+
+# Samsung Tizen TV transport; LGPL-3.0, installed as a separate library.
+samsungtvws==3.0.6

@@ -170,10 +170,9 @@ Previously untested authentication-required appliance candidates get one test;
 identity conflicts, disabled devices and already diagnosed unsupported resources do
 not trigger unsolicited retries. A failed automatic test requires an explicit retry.
 
-Samsung TV/network-audio OCF types are classified and shown as unsupported rather
-than repeatedly attempting the appliance profile. This release does not implement
-the TV WebSocket remote-control protocol, older TCP-8888 appliance pairing, cloud-only
-devices, or provisioning of OCF-PKI credentials. SmartThings cloud connectivity is
+Samsung TVs use a separate Tizen v2 HTTP/WebSocket adapter; see the TV section below.
+Network audio, older TCP-8888 appliance pairing, cloud-only devices and provisioning
+of OCF-PKI credentials remain unsupported. SmartThings cloud connectivity is
 not evidence of local access. Composite appliance subtrees are not yet traversed;
 a combo unit may expose only its main tree's readings.
 
@@ -413,3 +412,91 @@ Maintainers can replay community diagnostics and device0 fixtures with
 Findings become tested mappings and normal adapter releases, not executable JSON
 imports on user installations. See [upstream update checks](docs/UPSTREAM-UPDATES.md)
 for the weekly GitHub workflow and maintainer review process.
+
+## Samsung Tizen televisions (0.2.20, initial support)
+
+Discovered Samsung OCF televisions now use their local Tizen v2 interface instead
+of appliance DTLS authentication. This is intended for compatible Tizen models
+(usually 2016 onward), not a promise of support for every Samsung TV. Discovery
+still requires the TV to advertise OCF on the configured LAN; this version does
+not add SSDP discovery, manual TV registration or older Orsay pairing.
+
+1. Switch the TV on and run discovery. Public HTTP power status can be read without pairing.
+2. Choose **Pair TV** and approve **LoxBerry Samsung Local** on the TV screen.
+3. Enable **Allow supported controls** and save. Use the TV remote buttons below it.
+4. If permission is requested repeatedly, inspect the TV's Device Connection Manager
+   and its Access Notification setting. Menu names vary by model.
+
+The adapter selects secure WebSocket port 8002 when the TV advertises token
+support, otherwise port 8001. There is no automatic fallback to plaintext after a
+secure connection fails. Pairing is explicit and never triggered by background polling.
+Tokens are stored under the private plugin configuration in `credentials/tv-<id>.json`,
+never in reports or logs. Normal upgrades preserve them. Migrating to a new LoxBerry
+may require approving it again. Keep TV and LoxBerry on the same trusted LAN.
+The community transport accepts the TV's self-signed TLS certificate; HTTP identity
+comparison detects changed devices but does not authenticate them cryptographically.
+
+Readings use the existing MQTT base and `state/power` (1/0 only when reported).
+Availability means that the status endpoint is reachable. A timeout means offline,
+not power-off; always gate retained readings with availability. Volume, input and
+playback state readback, Wake-on-LAN and app launching are not implemented.
+
+For automation publish a **non-retained** JSON message to `<device-base>/set/remote`:
+`{"id":"<fresh UUID>","timestamp":<current Unix seconds>,"value":"volume_up"}`.
+Accepted values: `volume_up`, `volume_down`, `mute` (toggle), `home`, `source`
+(source menu), `up`, `down`, `left`, `right`, `enter`, `back`, `play`, `pause`,
+`power_off`. Pairing cannot be initiated over MQTT. Commands require enabled
+controls, expire after 30 seconds, are deduplicated and rate-limited. Failed
+commands are not replayed. `sent_unconfirmed` means transport send completed,
+not that the TV applied the key. TV HTTP command/XML export is available from 0.2.24.
+
+TV transport uses the separately installed **samsungtvws 3.0.6 (LGPL-3.0)**:
+https://github.com/xchwarze/samsung-tv-ws-api/tree/v3.0.6
+Its license remains included in the installed distribution; no library source is
+copied into the adapter. SmartThings-Local remains the appliance protocol layer.
+
+Hardware evidence: QE65Q90RALXXN public status, token pairing and token reuse were
+verified locally. Other Tizen models are protocol-compatible candidates and need
+field testing; no universal compatibility claim is made.
+
+### Guided setup (0.2.22)
+
+TV cards show connection, pairing and control readiness. Pairing approval and
+command results update automatically every five seconds; appliance polling itself
+keeps its configured interval. After pairing, Enable TV controls saves that choice
+in one action. Ordinary settings drafts and expanded device details survive live
+updates. Actions are never automatically replayed after a web request fails.
+Without JavaScript, normal forms and the manual refresh link remain available.
+
+The adapter compares the TV address with actual local interface network masks.
+A different subnet triggers setup guidance, not an automatic network change.
+For the tested Q90, a narrowly scoped UniFi masquerade rule from LoxBerry to the
+TV on TCP 8001-8002 enabled pairing and working remote controls across networks.
+Discovery network settings alone do not change the connection's source address.
+
+### TV MQTT visibility (0.2.23)
+
+Each television card includes a TV MQTT integration section with its exact topics
+and remote-command payload format. The existing broker and device base are reused.
+Retained numeric topics `remote/paired`, `remote/enabled` and `remote/available`
+expose credential storage, the control setting and combined readiness respectively.
+They are included in the topic CSV. `remote/commands` lists the fixed allowed keys.
+Readiness is not confirmation that a stored token remains authorized. Always check
+bridge/device availability as retained values may survive a disconnected service.
+Command results are non-retained and correlated by ID. No artificial volume, mute
+or source readings are inferred from sent keys. Soundbars remain discovery-only.
+
+### Compact TV integration and HTTP outputs (0.2.24)
+
+The TV card combines live status and MQTT topic copy buttons in **Loxone and MQTT**.
+Advanced MQTT payload instructions stay collapsed. Live values come from the
+adapter snapshot, not confirmation of delivery by the broker.
+
+**Download TV outputs (XML)** exports only that TV, using the existing authenticated
+POST control endpoint with an explicit TV profile. Import it as a Virtual Output
+template in Loxone Config. Each command takes a pulse, with repeats disabled and
+no off-command. IDs and timestamps are generated internally; do not build JSON in
+Loxone. Pairing cannot be requested through this endpoint. Commands are rate-limited
+to one per three seconds and require current service/device state and enabled controls.
+The XML contains the private control token; keep it private. Existing dryer HTTP
+requests without a profile remain compatible. Importing twice creates duplicates.

@@ -141,4 +141,9 @@ def report(device):
         result['support']['next_step'] = ('For OCF VD research, compare this public inventory with '
                                         'QuiteYellow/SmartThings-Local docs/ocf-vd-devices.md. '
                                         'TV remote control requires a separate pairing integration, not appliance mappings.')
+    if kind == 'television' and device.get('connection_report', {}).get('stage') == 'tv_http':
+        result['tv'] = {'protocol': 'Tizen v2', 'paired': bool(device.get('tv_paired')),
+                        'model': public_name(device.get('model', ''))}
+        result['collection']['reason'] = 'Public Tizen HTTP status; optional user-approved WebSocket pairing. No protected OCF reads.'
+        result['support']['next_step'] = 'Report adapter behavior here; TV transport uses samsungtvws. No tokens or network identity included.'
     return result

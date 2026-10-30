@@ -21,6 +21,7 @@ from .discovery import scan
 from .mqtt import Broker
 from .storage import atomic_json, read_json
 from .worker import DeviceWorker
+from .television import TelevisionWorker
 
 LOG = logging.getLogger(__name__)
 QUARANTINED = {"auth_required", "identity_mismatch", "identity_conflict", "unsupported"}
@@ -89,6 +90,7 @@ class Service:
         self.generation = {}
         self.compatibility_requested = set()
         self.activity = Activity()
+        self.tv_mqtt_status = {}
         self.previous_sensor_keys = {key: set(device.get("published_sensors", []))
                                      for key, device in self.registry.items()}
 
@@ -97,7 +99,18 @@ class Service:
 
     def request(self, value):
         action = value.get("action")
-        if action == 'dryer_command':
+        if action == 'tv_command':
+            key = value.get('device')
+            worker = self.workers.get(key)
+            stamp = value.get('created_at', 0)
+            if (not isinstance(worker, TelevisionWorker) or not worker.is_alive()
+                    or not max(self.started_at, time.time() - 30) <= stamp <= time.time() + 5):
+                raise ValueError('TV unavailable or request expired')
+            try:
+                worker.commands.put_nowait(value['command'])
+            except queue.Full:
+                raise ValueError('TV request queue full') from None
+        elif action == 'dryer_command':
             stamp = value.get('created_at', 0)
             if not max(self.started_at, time.time() - 30) <= stamp <= time.time() + 5:
                 raise ValueError('Expired command or queued before service restart')
@@ -136,7 +149,28 @@ class Service:
             credential = self.paths.config / "credentials" / f"{key}.json"
             has_import = credential.exists()
             kind = device_type(device.get("rt", []), {})
-            if kind in {"television", "network_audio"}:
+            if kind == 'television' and device.get('samsung'):
+                device['kind'] = kind
+                signature = (device.get('host'), device.get('secure_port'), json.dumps(options, sort_keys=True),
+                             self.config['poll_seconds'])
+                worker = self.workers.get(key)
+                if worker and (not allowed or device.get("status") == "identity_conflict" or worker.signature != signature):
+                    worker.stop()
+                    if worker.is_alive():
+                        continue
+                    del self.workers[key]
+                    worker = None
+                if worker and not worker.is_alive():
+                    del self.workers[key]
+                    worker = None
+                if allowed and not worker and device.get('status') != 'identity_conflict' and len(self.workers) < 32:
+                    device['key'] = key
+                    worker = TelevisionWorker(device, options, self.config['poll_seconds'], self.paths,
+                                              self.events, signature)
+                    self.workers[key] = worker
+                    worker.start()
+                continue
+            if kind == 'network_audio':
                 device.update(kind=kind, status="unsupported" if allowed else "disabled",
                               connection_report={"stage": "not_attempted", "error": "UnsupportedMediaProfile"},
                               diagnostic="Samsung TV/audio OCF profile discovered. Appliance authentication and mappings do not support this profile; automatic connection attempts are stopped.")
@@ -199,6 +233,15 @@ class Service:
             "status": device.get("status"), "sensors": device.get("sensors", {}),
             "control_enabled": self.config["devices"].get(key, {}).get("control", False),
             "power_control_available": device.get("control_available", False)})
+        if device.get('kind') == 'television':
+            from .television import KEYS
+            options = self.config['devices'].get(key, {})
+            ready = (online and self.config['enabled'] and options.get('enabled', True)
+                     and options.get('control', False) and device.get('tv_paired', False))
+            self.broker.publish(f"{key}/remote/paired", int(bool(device.get('tv_paired'))))
+            self.broker.publish(f"{key}/remote/enabled", int(bool(options.get('control'))))
+            self.broker.publish(f"{key}/remote/available", int(bool(ready)))
+            self.broker.publish(f"{key}/remote/commands", sorted(KEYS))
         if online:
             state = device.get("state", {})
             self.broker.publish(f"{key}/state", dict(state, updated_at=device.get("last_success")))
@@ -236,6 +279,10 @@ class Service:
             if (not self.config["enabled"] or not options.get("enabled", True) or not options.get("control")
                     or self.registry[key].get("status") != "online" or not worker or not worker.is_alive()):
                 self.handle_event(('result', key, {"id": value["id"], "result": "disabled_or_offline"}))
+                return
+            if value.get('tv_remote') and self.registry[key].get('kind') != 'television':
+                return
+            if self.registry[key].get('kind') == 'television' and 'operation' not in value:
                 return
             try:
                 self.db.execute("DELETE FROM commands WHERE stamp < ?", (time.time() - 120,))
@@ -312,6 +359,15 @@ class Service:
             except queue.Empty:
                 break
         self.reconcile()
+        for key, device in self.registry.items():
+            if device.get('kind') != 'television':
+                continue
+            options = self.config['devices'].get(key, {})
+            marker = (device.get('status'), device.get('tv_paired'), options.get('control'),
+                      options.get('enabled', True), self.config['enabled'])
+            if self.tv_mqtt_status.get(key) != marker:
+                self.publish_device(key)
+                self.tv_mqtt_status[key] = marker
         self.activity.observe(self.registry, self.broker.connected.is_set(), self.config['enabled'])
         if self.broker.reconnected.is_set():
             self.broker.reconnected.clear()
@@ -341,6 +397,8 @@ class Service:
             for key, device in self.registry.items():
                 if device.get("status") == "online":
                     device["status"] = "offline"
+                if device.get("kind") == "television":
+                    self.broker.publish(f"{key}/remote/available", 0)
                 self.broker.publish(f"{key}/availability", "offline")
             self.broker.close()
             self.save_registry()

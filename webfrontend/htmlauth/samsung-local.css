@@ -47,3 +47,6 @@
 }
 
 .sl .sl-log { height: 22rem; max-height: 55vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sl .sl-integration th:first-child { width: 28%; }
+.sl .sl-integration th:nth-child(2) { width: 18%; }
+.sl .sl-integration td .lb-btn { margin: 0 .4em; padding: .2em .5em; }

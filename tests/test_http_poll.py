@@ -10,6 +10,32 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_tv_output_template_routes_pause_separately_and_escapes_names():
+    from urllib.parse import parse_qs
+    xml = php_run("require 'bin/loxone_outputs.php'; echo samsungOutputXml("
+                  "['tv'=>['kind'=>'television','tv_paired'=>true,'control_available'=>true,'name'=>'TV & room']],"
+                  "['tv'=>['control'=>true]],'http://loxberry','samsunglocal','control-token');")
+    root = ET.fromstring(xml)
+    assert len(root) == 14
+    for command in root:
+        body = parse_qs(command.get('CmdOnPost'))
+        assert body['profile'] == ['tv']
+        assert body['device'] == ['tv']
+        assert body['operation'] != ['pair']
+        assert command.get('CmdOnMethod') == 'POST'
+        assert command.get('CmdOff') == '' and command.get('Repeat') == '0'
+        assert command.get('Title').startswith('TV & room:')
+
+
+def test_http_cannot_pair_tv(tmp_path):
+    (tmp_path / 'config').mkdir()
+    (tmp_path / 'config/http-control.json').write_text(json.dumps({'token': 'a' * 64}))
+    output = php_run("require 'loxberry_system.php'; $_SERVER['REQUEST_METHOD']='POST'; "
+                     "$_POST=['token'=>'" + 'a' * 64 + "','device'=>'tv','profile'=>'tv','operation'=>'pair']; "
+                     "require 'webfrontend/html/control.php';", env={'SAMSUNG_TEST_RUNTIME': str(tmp_path)})
+    assert json.loads(output) == {'ok': False}
+
+
 def test_output_template_uses_post_separate_token_and_no_repeats():
     xml = php_run("require 'bin/loxone_outputs.php'; echo samsungOutputXml("
                   "['dryer'=>['kind'=>'dryer','control_available'=>true,'name'=>'Dryer',"

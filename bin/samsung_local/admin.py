@@ -7,11 +7,47 @@ from .credentials import validate_import
 from .storage import atomic_json, read_json, valid_key, validate_config
 
 
+class UserRequestError(ValueError):
+    """Static, user-safe validation message; never include request values or secrets."""
+
+
 def act(paths, request):
     if not isinstance(request, dict):
         raise ValueError("Expected a request object")
     action = request.get("action")
     config = paths.load_config()
+    if action in {'tv_command', 'tv_http_command'}:
+        from .television import KEYS
+        key = valid_key(request.get('device'))
+        operation = request.get('operation')
+        status = read_json(paths.status, {})
+        device = status.get('devices', {}).get(key, {})
+        options = config['devices'].get(key, {})
+        now = time.time()
+        if operation not in (set(KEYS) if action == 'tv_http_command' else {*KEYS, 'pair'}):
+            raise UserRequestError('TV operation missing or unsupported. Reload the plugin page and try again.')
+        if device.get('kind') != 'television':
+            raise UserRequestError('TV is not in the current device list. Run discovery and reload the page.')
+        if not 0 <= now - status.get('heartbeat', 0) < 30:
+            raise UserRequestError('Service status is stale. Check that Samsung Local is running, then reload the page.')
+        if not config['enabled'] or not options.get('enabled', True):
+            raise UserRequestError('Enable automatic reads for the plugin and this TV, then save before pairing.')
+        if device.get('status') != 'online':
+            raise UserRequestError('TV is not online. Switch it on, check its displayed IP address and run discovery before pairing.')
+        if operation != 'pair' and (not options.get('control') or not device.get('tv_paired')):
+            raise UserRequestError('Pair the TV, enable supported controls and save before sending remote commands.')
+        if len(list(paths.requests.glob('*.json'))) >= 32:
+            raise UserRequestError('TV request queue is full. Wait for the service to process pending requests.')
+        last = read_json(paths.data / 'tv-command-rate.json', {})
+        if now - last.get(key, 0) < 3:
+            raise UserRequestError('Wait three seconds before sending another TV request.')
+        last[key] = now
+        atomic_json(paths.data / 'tv-command-rate.json', last)
+        identifier = str(uuid.uuid4())
+        atomic_json(paths.requests / f'{identifier}.json', {'action': 'tv_command', 'device': key,
+                    'created_at': now, 'command': {'id': identifier, 'timestamp': now, 'operation': operation}})
+        return ('Request queued. Pairing requires approval on the TV; commands are not confirmation of execution.'
+                if operation == 'pair' else 'Command queued; verify the appliance state. Not confirmation of execution.')
     if action == 'dryer_command':
         from .dryer_control import ACTIONS
         key = valid_key(request.get('device'))

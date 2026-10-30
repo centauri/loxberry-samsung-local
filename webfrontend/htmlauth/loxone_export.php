@@ -10,6 +10,11 @@ function samsungTopicRows(array $status): array {
         $base = $prefix . '/' . $id;
         $label = (string)($device['name'] ?? $id);
         $rows[] = [$base . '/availability', $label . ' availability', 'text', ''];
+        if (($device['kind'] ?? '') === 'television') {
+            foreach (['paired', 'enabled', 'available'] as $field) {
+                $rows[] = [$base . '/remote/' . $field, $label . ' remote ' . $field, 'number', ''];
+            }
+        }
         foreach (($device['state'] ?? []) as $key => $value) {
             if (!preg_match('/^[A-Za-z0-9_-]+$/D', (string)$key) || !is_scalar($value)) continue;
             // Use actual JSON number types; numeric-looking text may be an enum or identifier.

@@ -196,10 +196,16 @@ def test_tv_is_classified_without_repeated_appliance_connections(paths, monkeypa
     obj.registry['tv'] = {'samsung': True, 'host': '192.0.2.1', 'secure_port': 45955,
                            'rt': ['oic.d.tv'], 'status': 'offline'}
     monkeypatch.setattr(service, 'DeviceWorker', lambda *a: (_ for _ in ()).throw(AssertionError('No appliance session')))
+    created = []
+    class TVWorker:
+        def __init__(self, *args):
+            created.append(args)
+        def start(self):
+            pass
+    monkeypatch.setattr(service, 'TelevisionWorker', TVWorker)
     obj.reconcile()
     assert obj.registry['tv']['kind'] == 'television'
-    assert obj.registry['tv']['status'] == 'unsupported'
-    assert 'profile' in obj.registry['tv']['diagnostic']
+    assert len(created) == 1
     obj.db.close()
     obj.executor.shutdown()
 
