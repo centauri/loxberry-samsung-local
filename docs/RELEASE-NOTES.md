@@ -1,3 +1,25 @@
+## 0.2.24 Samsung TV controls and Loxone integration
+
+Adds opt-in pairing and remote commands for compatible Samsung Tizen TVs using
+samsungtvws. Pairing and remote control were confirmed on a Samsung Q90 TV;
+compatibility with every Samsung model is not guaranteed. Cross-subnet setup
+help explains potential network restrictions. Older Orsay TVs and soundbars
+are not supported by this TV profile.
+
+Adds TV MQTT readings, readiness and non-retained remote commands, plus HTTP
+virtual-output XML export for Loxone Config. The adapter generates command IDs
+and timestamps for HTTP requests. Pairing remains an explicit action in the UI.
+Power-on and actual volume, mute and selected-input feedback are not implemented.
+A sent command is not confirmation that the TV executed it.
+
+Streamlines setup with automatic status refresh that preserves unsaved edits,
+a compact Loxone and MQTT panel, copyable topics and collapsed advanced help.
+Includes English and Dutch guidance. Existing dryer output routing is preserved.
+
+Validation: 277 tests passed, one skipped; PHP syntax, Python lint and live-UI
+checks passed locally. TV output XML is structurally tested; importing the new
+TV template in Loxone Config still needs user verification.
+
 ## 0.2.19 permanent stable and edge downloads
 
 Adds permanent stable and edge installation ZIP links. Stable releases update
